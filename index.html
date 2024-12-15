@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Darkpad</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="/app.js" defer></script>
+</head>
+<body class="bg-gray-900 min-h-screen p-4">
+    <div class="max-w-7xl mx-auto space-y-4">
+        <div class="space-y-1">
+            <div class="flex gap-2">
+                <input 
+                    type="text" 
+                    id="title" 
+                    placeholder="Title"
+                    class="flex-1 bg-gray-800 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onkeypress="if(event.key === 'Enter') { event.preventDefault(); loadNote(); }"
+                >
+                <button 
+                    onclick="loadNote()" 
+                    class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                    Load
+                </button>
+            </div>
+            <div id="loadMessage" class="text-sm ml-1 hidden"></div>
+        </div>
+
+        <div class="flex flex-col items-center justify-center space-y-4">
+            <div id="saveMessage" class="text-sm hidden">
+                <span class="text-green-500 flex items-center">
+                    Saved successfully 
+                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button 
+                    onclick="saveNote()" 
+                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    Save
+                </button>
+                <button 
+                    onclick="clearNote()" 
+                    class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                    Clear
+                </button>
+            </div>
+        </div>
+        
+        <textarea 
+            id="content" 
+            placeholder="Note"
+            class="w-full h-[calc(100vh-8rem)] bg-gray-800 text-white px-4 py-2 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+        ></textarea>
+
+        
+    </div>
+</body>
+</html> 
