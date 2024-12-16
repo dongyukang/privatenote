@@ -42,8 +42,6 @@ function showMessage(element, message, isError = false) {
     }, 3000); // Hide after 3 seconds
 }
 
-// Add these encryption/decryption helper functions
-
 // Derive encryption key from title
 async function deriveKey(title) {
     const encoder = new TextEncoder();
@@ -58,7 +56,7 @@ async function deriveKey(title) {
     return await crypto.subtle.deriveKey(
         {
             name: 'PBKDF2',
-            salt: encoder.encode('fixed-salt'), // You might want to use a different salt
+            salt: encoder.encode('fixed-salt'),
             iterations: 100000,
             hash: 'SHA-256'
         },
