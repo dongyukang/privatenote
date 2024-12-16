@@ -33,7 +33,8 @@ async function hashTitle(title) {
 
 // Function to show temporary message
 function showMessage(element, message, isError = false) {
-    element.textContent = message;
+    const safeMessage = escapeHtml(message);
+    element.textContent = safeMessage;
     element.className = `text-sm ${isError ? 'text-red-500' : 'text-green-500'}`;
     element.classList.remove('hidden');
     
@@ -123,22 +124,23 @@ async function decryptContent(encryptedContent, title) {
 
 // Load note function
 async function loadNote() {
-    if (!titleInput.value.trim()) {
-        showMessage(loadMessage, 'Please enter a title to load', true);
+    const title = titleInput.value.trim();
+
+    if (!validateInput(title)) {
+        showMessage(loadMessage, 'Invalid title', true);
         return;
     }
 
     try {
-        const title = titleInput.value.trim();
-        const hashedTitle = await hashTitle(title);
+        const safeTitle = escapeHtml(title);
+        const hashedTitle = await hashTitle(safeTitle);
         const snapshot = await notesRef.orderByChild('hashedTitle')
             .equalTo(hashedTitle)
             .once('value');
 
         if (snapshot.exists()) {
             const note = Object.values(snapshot.val())[0];
-            // Decrypt the content
-            const decryptedContent = await decryptContent(note.content, title);
+            const decryptedContent = await decryptContent(note.content, safeTitle);
             contentInput.value = decryptedContent;
             showMessage(loadMessage, 'Note loaded successfully');
         } else {
@@ -153,19 +155,21 @@ async function loadNote() {
 
 // Save note to Firebase
 async function saveNote() {
-    if (!titleInput.value.trim()) {
-        showMessage(saveMessage, 'Please enter a title to save', true);
+    const title = titleInput.value.trim();
+    const content = contentInput.value.trim();
+
+    if (!validateInput(title)) {
+        showMessage(saveMessage, 'Invalid title', true);
         return;
     }
 
     try {
-        const title = titleInput.value.trim();
-        const content = contentInput.value;
-        const hashedTitle = await hashTitle(title);
+        const safeTitle = escapeHtml(title);
+        const safeContent = escapeHtml(content);
         
-        // Check if content is empty
-        if (!content.trim()) {
-            // Find and delete the note if it exists
+        if (!safeContent) {
+
+            const hashedTitle = await hashTitle(safeTitle);
             const snapshot = await notesRef.orderByChild('hashedTitle')
                 .equalTo(hashedTitle)
                 .once('value');
@@ -180,8 +184,9 @@ async function saveNote() {
             return;
         }
 
-        // If content is not empty, proceed with normal save
-        const encryptedContent = await encryptContent(content, title);
+        const hashedTitle = await hashTitle(safeTitle);
+        const encryptedContent = await encryptContent(safeContent, safeTitle);
+        
         const snapshot = await notesRef.orderByChild('hashedTitle')
             .equalTo(hashedTitle)
             .once('value');
@@ -212,4 +217,23 @@ async function saveNote() {
 function clearNote() {
     titleInput.value = '';
     contentInput.value = '';
+}
+
+function escapeHtml(unsafe) {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function validateInput(input) {
+    if (!input || input.trim() === '') {
+        return false;
+    }
+    if (input.length > 1000) {
+        return false;
+    }
+    return true;
 } 
