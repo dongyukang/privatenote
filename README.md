@@ -1,5 +1,7 @@
 # DarkPad
 
+![DarkPad](https://github.com/darkpad/darkpad/blob/main/public/darkpad.png)
+
 DarkPad is a free and open note-taking platform where anyone can create and access encrypted notes. It's a copycat of [publicnote.com](https://publicnote.com), but simpler to setup on your own.
 
 You can check out the demo [here](https://darkpad.vercel.app/).
