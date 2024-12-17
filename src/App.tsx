@@ -33,10 +33,16 @@ function App() {
     }, 3000);
   };
 
+  // Normalize input
+  const normalizeInput = (input: string) => {
+    return input.normalize('NFC'); // Normalize to NFC form
+  };
+
   // Hash title using SHA-256
   const hashTitle = async (title: string) => {
+    const normalizedTitle = normalizeInput(title);
     const encoder = new TextEncoder();
-    const data = encoder.encode(title);
+    const data = encoder.encode(normalizedTitle);
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
