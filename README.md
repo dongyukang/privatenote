@@ -6,10 +6,6 @@ DarkPad is a free and open note-taking platform where anyone can create and acce
 
 You can check out the demo [here](https://darkpad.vercel.app/).
 
-## Setup Guide
-
-Just replace the values in the `firebaseConfig` object in `app.js` with your own Firebase configuration values.
-
 ## How It Works
 
 1. Enter a title and content for your note
