@@ -140,10 +140,10 @@ function App() {
         const note = Object.values(snapshot.val())[0] as any;
         const decryptedContent = await decryptContent(note.content, title);
         setContent(decryptedContent);
-        showMessage(setLoadMessage, 'Note loaded successfully');
+        //showMessage(setLoadMessage, 'Note loaded successfully');
       } else {
         setContent('');
-        showMessage(setLoadMessage, 'No note found with this title', true);
+        //showMessage(setLoadMessage, 'No note found with this title', true);
       }
     } catch (error) {
       console.error('Error loading note:', error);
