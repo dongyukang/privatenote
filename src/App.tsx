@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, push, get, remove, update, query, orderByChild, equalTo } from 'firebase/database';
 
+// Detailed: Firebase configuration uses environment variables to securely connect to your Firebase project and enable its services.
+// Ensure that your .env file or environment settings provide all necessary keys.
 // Firebase configuration
 const firebaseConfig = {
     apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
@@ -26,6 +28,7 @@ function App() {
   const [loadMessage, setLoadMessage] = useState({ text: '', isError: false });
   const [saveMessage, setSaveMessage] = useState({ text: '', isError: false });
 
+  // Detailed: The showMessage function displays a temporary message for user feedback. It takes a state setter function, a message string, and an optional isError flag to determine error styling. The message clears automatically after 3 seconds.
   // Show temporary message
   const showMessage = (setMessageFunc: Function, message: string, isError = false) => {
     setMessageFunc({ text: message, isError });
@@ -39,6 +42,7 @@ function App() {
     return input.normalize('NFC'); // Normalize to NFC form
   };
 
+  // Detailed: This function normalizes the input title to NFC form, encodes it to bytes, and computes its SHA-256 hash for a unique identifier.
   // Hash title using SHA-256
   const hashTitle = async (title: string) => {
     const normalizedTitle = normalizeInput(title);
