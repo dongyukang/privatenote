@@ -27,6 +27,9 @@ function App() {
   const [content, setContent] = useState('');
   const [loadMessage, setLoadMessage] = useState({ text: '', isError: false });
   const [saveMessage, setSaveMessage] = useState({ text: '', isError: false });
+  const [isLocalMode, setIsLocalMode] = useState(false);
+  const [localNotes, setLocalNotes] = useState<Record<string, { content: string, hashedTitle: string, timestamp: number }>>({});
+  const [isLocalFileLoaded, setIsLocalFileLoaded] = useState(false);
 
   // Detailed: The showMessage function displays a temporary message for user feedback. It takes a state setter function, a message string, and an optional isError flag to determine error styling. The message clears automatically after 3 seconds.
   // Show temporary message
@@ -129,6 +132,44 @@ function App() {
     }
   };
 
+  // Import local database
+  const importLocalDatabase = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (event) => {
+      try {
+        const file = (event.target as HTMLInputElement).files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const jsonData = JSON.parse(e.target?.result as string);
+            // Check if the imported data has the expected structure
+            if (jsonData && jsonData.notes && typeof jsonData.notes === 'object') {
+              setLocalNotes(jsonData.notes);
+            } else {
+              // If it's already in the flat format, use it directly
+              setLocalNotes(jsonData);
+            }
+            setIsLocalFileLoaded(true);
+            showMessage(setLoadMessage, 'Local database imported successfully');
+          } catch (error) {
+            console.error('JSON parsing error:', error);
+            showMessage(setLoadMessage, 'Failed to parse JSON file', true);
+          }
+        };
+        reader.readAsText(file);
+      } catch (error) {
+        console.error('File import error:', error);
+        showMessage(setLoadMessage, 'Failed to import file', true);
+      }
+    };
+    input.click();
+  };
+
+
   // Load note
   const loadNote = async () => {
     if (!validateInput(title)) {
@@ -138,17 +179,36 @@ function App() {
 
     try {
       const hashedTitle = await hashTitle(title);
-      const noteQuery = query(notesRef, orderByChild('hashedTitle'), equalTo(hashedTitle));
-      const snapshot = await get(noteQuery);
+      
+      if (isLocalMode) {
+        if (!isLocalFileLoaded) {
+          showMessage(setLoadMessage, 'No local database loaded. Please import a file first.', true);
+          return;
+        }
 
-      if (snapshot.exists()) {
-        const note = Object.values(snapshot.val())[0] as any;
-        const decryptedContent = await decryptContent(note.content, title);
-        setContent(decryptedContent);
-        //showMessage(setLoadMessage, 'Note loaded successfully');
+        // Find note in local database
+        const noteFound = Object.entries(localNotes).find(([_, note]) => note.hashedTitle === hashedTitle);
+        
+        if (noteFound) {
+          const decryptedContent = await decryptContent(noteFound[1].content, title);
+          setContent(decryptedContent);
+        } else {
+          setContent('');
+          showMessage(setLoadMessage, 'No note found with this title', true);
+        }
       } else {
-        setContent('');
-        //showMessage(setLoadMessage, 'No note found with this title', true);
+        // Firebase load
+        const noteQuery = query(notesRef, orderByChild('hashedTitle'), equalTo(hashedTitle));
+        const snapshot = await get(noteQuery);
+
+        if (snapshot.exists()) {
+          const note = Object.values(snapshot.val())[0] as any;
+          const decryptedContent = await decryptContent(note.content, title);
+          setContent(decryptedContent);
+        } else {
+          setContent('');
+          showMessage(setLoadMessage, 'No note found with this title', true);
+        }
       }
     } catch (error) {
       console.error('Error loading note:', error);
@@ -164,43 +224,97 @@ function App() {
     }
 
     try {
-      if (!content) {
-        const hashedTitle = await hashTitle(title);
+      const hashedTitle = await hashTitle(title);
+      
+      if (isLocalMode) {
+        if (!isLocalFileLoaded) {
+          showMessage(setSaveMessage, 'No local database loaded. Please import a file first.', true);
+          return;
+        }
+
+        if (!content) {
+          // Delete note in local mode
+          const newLocalNotes = { ...localNotes };
+          const noteKey = Object.keys(localNotes).find(
+            key => localNotes[key].hashedTitle === hashedTitle
+          );
+          
+          if (noteKey) {
+            delete newLocalNotes[noteKey];
+            setLocalNotes(newLocalNotes);
+            showMessage(setSaveMessage, 'Note deleted successfully');
+          } else {
+            showMessage(setSaveMessage, 'No note to delete', true);
+          }
+          return;
+        }
+
+        // Add or update note in local mode
+        const encryptedContent = await encryptContent(content, title);
+        const newNote = {
+          content: encryptedContent,
+          hashedTitle: hashedTitle,
+          timestamp: Date.now()
+        };
+
+        const existingNoteEntry = Object.entries(localNotes).find(
+          ([_, note]) => note.hashedTitle === hashedTitle
+        );
+
+        if (existingNoteEntry) {
+          // Update existing note
+          setLocalNotes({
+            ...localNotes,
+            [existingNoteEntry[0]]: newNote
+          });
+        } else {
+          // Add new note with a key format similar to Firebase's push IDs
+          const newKey = `-${Math.random().toString(36).substr(2, 9)}${Date.now().toString(36)}`;
+          setLocalNotes({
+            ...localNotes,
+            [newKey]: newNote
+          });
+        }
+        
+        showMessage(setSaveMessage, 'Note saved successfully');
+      } else {
+        // Firebase save
+        if (!content) {
+          const noteQuery = query(notesRef, orderByChild('hashedTitle'), equalTo(hashedTitle));
+          const snapshot = await get(noteQuery);
+
+          if (snapshot.exists()) {
+            const noteId = Object.keys(snapshot.val())[0];
+            await remove(ref(database, `notes/${noteId}`));
+            showMessage(setSaveMessage, 'Note deleted successfully');
+          } else {
+            showMessage(setSaveMessage, 'No note to delete', true);
+          }
+          return;
+        }
+
+        const encryptedContent = await encryptContent(content, title);
+        
         const noteQuery = query(notesRef, orderByChild('hashedTitle'), equalTo(hashedTitle));
         const snapshot = await get(noteQuery);
 
         if (snapshot.exists()) {
           const noteId = Object.keys(snapshot.val())[0];
-          await remove(ref(database, `notes/${noteId}`));
-          showMessage(setSaveMessage, 'Note deleted successfully');
+          await update(ref(database, `notes/${noteId}`), {
+            content: encryptedContent,
+            hashedTitle: hashedTitle,
+            timestamp: Date.now()
+          });
         } else {
-          showMessage(setSaveMessage, 'No note to delete', true);
+          await push(notesRef, {
+            content: encryptedContent,
+            hashedTitle: hashedTitle,
+            timestamp: Date.now()
+          });
         }
-        return;
+
+        showMessage(setSaveMessage, 'Note saved successfully');
       }
-
-      const hashedTitle = await hashTitle(title);
-      const encryptedContent = await encryptContent(content, title);
-      
-      const noteQuery = query(notesRef, orderByChild('hashedTitle'), equalTo(hashedTitle));
-      const snapshot = await get(noteQuery);
-
-      if (snapshot.exists()) {
-        const noteId = Object.keys(snapshot.val())[0];
-        await update(ref(database, `notes/${noteId}`), {
-          content: encryptedContent,
-          hashedTitle: hashedTitle,
-          timestamp: Date.now()
-        });
-      } else {
-        await push(notesRef, {
-          content: encryptedContent,
-          hashedTitle: hashedTitle,
-          timestamp: Date.now()
-        });
-      }
-
-      showMessage(setSaveMessage, 'Note saved successfully');
     } catch (error) {
       console.error('Error saving note:', error);
       showMessage(setSaveMessage, 'Failed to save note', true);
@@ -211,6 +325,18 @@ function App() {
   const clearNote = () => {
     setTitle('');
     setContent('');
+  };
+
+  // Toggle local mode
+  const toggleLocalMode = () => {
+    setIsLocalMode(!isLocalMode);
+    if (!isLocalMode) {
+      // Switching to local mode
+      setContent('');
+    } else {
+      // Switching back to Firebase mode
+      setContent('');
+    }
   };
 
   // Utility functions
@@ -227,6 +353,21 @@ function App() {
   return (
     <div className="bg-gray-900 min-h-screen p-4">
       <div className="max-w-7xl mx-auto space-y-4">
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-white text-xl font-bold">DarkPad</h1>
+          <div className="flex items-center">
+            <span className="text-white mr-2">Local Mode</span>
+            <button
+              onClick={toggleLocalMode}
+              className={`relative inline-flex items-center h-6 rounded-full w-11 ${isLocalMode ? 'bg-blue-600' : 'bg-gray-700'}`}
+            >
+              <span
+                className={`inline-block w-4 h-4 transform transition bg-white rounded-full ${isLocalMode ? 'translate-x-6' : 'translate-x-1'}`}
+              />
+            </button>
+          </div>
+        </div>
+
         <div className="space-y-1">
           <div className="flex gap-2">
             <div className="flex-1 relative">
@@ -281,12 +422,24 @@ function App() {
             </div>
           )}
           <div className="flex items-center space-x-2">
-            <button 
-              onClick={saveNote}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              Save
-            </button>
+            {!isLocalMode && (
+              <button 
+                onClick={saveNote}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                Save
+              </button>
+            )}
+            {isLocalMode && (
+              <>
+                <button 
+                  onClick={importLocalDatabase}
+                  className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  Import
+                </button>
+              </>
+            )}
             <button 
               onClick={clearNote}
               className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
@@ -294,13 +447,20 @@ function App() {
               Clear
             </button>
           </div>
+          {isLocalMode && (
+            <div className="text-sm text-gray-400">
+              {isLocalFileLoaded 
+                ? `Local database loaded with ${Object.keys(localNotes).length} notes`
+                : 'No local database loaded'}
+            </div>
+          )}
         </div>
         
         <textarea 
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="Note"
-          className="w-full h-[calc(100vh-8rem)] bg-gray-800 text-white px-4 py-2 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full h-[calc(100vh-12rem)] bg-gray-800 text-white px-4 py-2 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
     </div>
