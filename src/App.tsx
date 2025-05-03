@@ -2,6 +2,7 @@ import React, { useState, useRef, DragEvent, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, push, get, remove, update, query, orderByChild, equalTo } from 'firebase/database';
 import { marked } from 'marked';
+import markedFootNote from 'marked-footnote';
 
 // Detailed: Firebase configuration uses environment variables to securely connect to your Firebase project and enable its services.
 // Ensure that your .env file or environment settings provide all necessary keys.
@@ -21,6 +22,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 const notesRef = ref(database, 'notes');
+
+// Add the footnote extension to marked
+marked.use(markedFootNote());
 
 // Configure marked for full GitHub Flavored Markdown support
 marked.setOptions({
