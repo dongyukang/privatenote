@@ -1,6 +1,7 @@
 import React, { useState, useRef, DragEvent } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, push, get, remove, update, query, orderByChild, equalTo } from 'firebase/database';
+import ReactMarkdown from 'react-markdown';
 
 // Detailed: Firebase configuration uses environment variables to securely connect to your Firebase project and enable its services.
 // Ensure that your .env file or environment settings provide all necessary keys.
@@ -33,6 +34,7 @@ function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [fileHash, setFileHash] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isMarkdownMode, setIsMarkdownMode] = useState(false);
   const dropAreaRef = useRef<HTMLDivElement>(null);
 
   // Detailed: The showMessage function displays a temporary message for user feedback. It takes a state setter function, a message string, and an optional isError flag to determine error styling. The message clears automatically after 3 seconds.
@@ -373,6 +375,11 @@ function App() {
     setIsDarkMode(!isDarkMode);
   };
 
+  // Toggle markdown view
+  const toggleMarkdownMode = () => {
+    setIsMarkdownMode(!isMarkdownMode);
+  };
+
   // Utility functions
   const validateInput = (input: string) => {
     if (!input || input.trim() === '') {
@@ -541,14 +548,43 @@ function App() {
           )}
         </div>
         
-        <textarea 
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Note"
-          className={`w-full h-[calc(100vh-12rem)] ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} px-4 py-2 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200`}
-          readOnly={isLocalMode}
-          style={{width: 'calc(100vw - 2rem)'}}
-        />
+        <div className="relative">
+          {isMarkdownMode && (
+            <div 
+              className={`w-full h-[calc(100vh-12rem)] ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} px-4 py-2 rounded-lg overflow-auto transition-colors duration-200`}
+              style={{width: 'calc(100vw - 2rem)'}}
+            >
+              <ReactMarkdown>
+                {content}
+              </ReactMarkdown>
+            </div>
+          )}
+          {!isMarkdownMode && (
+            <textarea 
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Note"
+              className={`w-full h-[calc(100vh-12rem)] ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} px-4 py-2 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200`}
+              readOnly={isLocalMode}
+              style={{width: 'calc(100vw - 2rem)'}}
+            />
+          )}
+          <button
+            onClick={toggleMarkdownMode}
+            className={`absolute right-4 top-4 p-2 rounded-full ${isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200`}
+            title={isMarkdownMode ? "Show raw text" : "Show markdown preview"}
+          >
+            {isMarkdownMode ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
