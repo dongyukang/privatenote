@@ -1,7 +1,7 @@
-import React, { useState, useRef, DragEvent } from 'react';
+import React, { useState, useRef, DragEvent, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, push, get, remove, update, query, orderByChild, equalTo } from 'firebase/database';
-import ReactMarkdown from 'react-markdown';
+import { marked } from 'marked';
 
 // Detailed: Firebase configuration uses environment variables to securely connect to your Firebase project and enable its services.
 // Ensure that your .env file or environment settings provide all necessary keys.
@@ -21,6 +21,18 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 const notesRef = ref(database, 'notes');
+
+// Configure marked for full GitHub Flavored Markdown support
+marked.setOptions({
+  gfm: true, // GitHub Flavored Markdown
+  breaks: true, // Add <br> on a single line break (like GitHub)
+  headerIds: true, // Generate IDs for headings
+  mangle: false, // Don't escape HTML
+  pedantic: false, // Don't conform to original markdown spec exactly
+  sanitize: false, // Don't sanitize, as we'll sanitize in our own way
+  smartypants: true, // Use smart typography like curly quotes
+  xhtml: false // Don't output XHTML-style self-closing tags
+});
 
 function App() {
   const [title, setTitle] = useState('');
@@ -554,9 +566,43 @@ function App() {
               className={`w-full h-[calc(100vh-12rem)] ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} px-4 py-2 rounded-lg overflow-auto transition-colors duration-200`}
               style={{width: 'calc(100vw - 2rem)'}}
             >
-              <ReactMarkdown>
-                {content}
-              </ReactMarkdown>
+              <div 
+                className="markdown-body" 
+                style={{
+                  color: isDarkMode ? '#e5e7eb' : '#374151',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+                }}
+                dangerouslySetInnerHTML={{ __html: marked(content) }}
+              />
+              <style dangerouslySetInnerHTML={{ __html: `
+                .markdown-body h1 { font-size: 2em; margin-top: 0.67em; margin-bottom: 0.67em; font-weight: bold; color: ${isDarkMode ? '#f9fafb' : '#111827'}; }
+                .markdown-body h2 { font-size: 1.5em; margin-top: 0.83em; margin-bottom: 0.83em; font-weight: bold; color: ${isDarkMode ? '#f9fafb' : '#111827'}; }
+                .markdown-body h3 { font-size: 1.17em; margin-top: 1em; margin-bottom: 1em; font-weight: bold; color: ${isDarkMode ? '#f9fafb' : '#111827'}; }
+                .markdown-body h4 { margin-top: 1.33em; margin-bottom: 1.33em; font-weight: bold; color: ${isDarkMode ? '#f9fafb' : '#111827'}; }
+                .markdown-body h5 { font-size: 0.83em; margin-top: 1.67em; margin-bottom: 1.67em; font-weight: bold; color: ${isDarkMode ? '#f9fafb' : '#111827'}; }
+                .markdown-body h6 { font-size: 0.67em; margin-top: 2.33em; margin-bottom: 2.33em; font-weight: bold; color: ${isDarkMode ? '#f9fafb' : '#111827'}; }
+                .markdown-body p { margin-top: 1em; margin-bottom: 1em; }
+                .markdown-body a { color: ${isDarkMode ? '#3b82f6' : '#2563eb'}; text-decoration: underline; }
+                .markdown-body ul { padding-left: 2em; list-style-type: disc; margin-top: 1em; margin-bottom: 1em; }
+                .markdown-body ol { padding-left: 2em; list-style-type: decimal; margin-top: 1em; margin-bottom: 1em; }
+                .markdown-body li { display: list-item; }
+                .markdown-body blockquote { border-left: 4px solid ${isDarkMode ? '#4b5563' : '#e5e7eb'}; padding-left: 1em; margin-left: 0; margin-right: 0; color: ${isDarkMode ? '#9ca3af' : '#6b7280'}; }
+                .markdown-body code:not(pre code) { padding: 0.2em 0.4em; background-color: ${isDarkMode ? '#374151' : '#f3f4f6'}; border-radius: 0.25em; }
+                .markdown-body pre { margin-top: 1em; margin-bottom: 1em; padding: 1em; background-color: ${isDarkMode ? '#1f2937' : '#f9fafb'}; border-radius: 0.375em; overflow-x: auto; }
+                .markdown-body pre code { display: block; white-space: pre; }
+                .markdown-body hr { border: none; border-top: 1px solid ${isDarkMode ? '#4b5563' : '#e5e7eb'}; margin: 1.5em 0; }
+                .markdown-body table { border-collapse: collapse; width: 100%; margin-top: 1em; margin-bottom: 1em; }
+                .markdown-body thead { background-color: ${isDarkMode ? '#374151' : '#f3f4f6'}; }
+                .markdown-body th { padding: 0.75em 1em; text-align: left; font-weight: bold; }
+                .markdown-body td { padding: 0.75em 1em; }
+                .markdown-body tr { border-bottom: 1px solid ${isDarkMode ? '#4b5563' : '#e5e7eb'}; }
+                .markdown-body img { max-width: 100%; }
+                .markdown-body .task-list-item { list-style-type: none; }
+                .markdown-body .task-list-item-checkbox { margin-right: 0.5em; }
+                .markdown-body .footnotes { border-top: 1px solid ${isDarkMode ? '#4b5563' : '#e5e7eb'}; margin-top: 2em; padding-top: 1em; }
+                .markdown-body .footnote-ref { font-size: 0.8em; vertical-align: super; }
+                .markdown-body .footnote-backref { font-size: 0.8em; }
+              `}} />
             </div>
           )}
           {!isMarkdownMode && (
